@@ -22,16 +22,22 @@ def get_web_domains(env, include_www_redirects=True, exclude_dns_elsewhere=True)
 		# Add 'www.' subdomains that we want to provide default redirects
 		# to the main domain for. We'll add 'www.' to any DNS zones, i.e.
 		# the topmost of each domain we serve.
-		domains |= set('www.' + zone for zone, zonefile in get_dns_zones(env))
+		domains |= {'www.' + zone for zone, zonefile in get_dns_zones(env)}
 
 	# Add Autoconfiguration domains for domains that there are user accounts at:
 	# 'autoconfig.' for Mozilla Thunderbird auto setup.
 	# 'autodiscover.' for Activesync autodiscovery.
-	domains |= set('autoconfig.' + maildomain for maildomain in get_mail_domains(env, users_only=True))
-	domains |= set('autodiscover.' + maildomain for maildomain in get_mail_domains(env, users_only=True))
+	domains |= {
+	    'autoconfig.' + maildomain
+	    for maildomain in get_mail_domains(env, users_only=True)
+	}
+	domains |= {
+	    'autodiscover.' + maildomain
+	    for maildomain in get_mail_domains(env, users_only=True)
+	}
 
 	# 'mta-sts.' for MTA-STS support for all domains that have email addresses.
-	domains |= set('mta-sts.' + maildomain for maildomain in get_mail_domains(env))
+	domains |= {'mta-sts.' + maildomain for maildomain in get_mail_domains(env)}
 
 	if exclude_dns_elsewhere:
 		# ...Unless the domain has an A/AAAA record that maps it to a different
@@ -49,12 +55,12 @@ def get_web_domains(env, include_www_redirects=True, exclude_dns_elsewhere=True)
 	return domains
 
 def get_domains_with_a_records(env):
-	domains = set()
 	dns = get_custom_dns_config(env)
-	for domain, rtype, value in dns:
-		if rtype == "CNAME" or (rtype in ("A", "AAAA") and value not in ("local", env['PUBLIC_IP'])):
-			domains.add(domain)
-	return domains
+	return {
+	    domain
+	    for domain, rtype, value in dns if rtype == "CNAME" or (
+	        rtype in ("A", "AAAA") and value not in ("local", env['PUBLIC_IP']))
+	}
 
 def get_web_domains_with_root_overrides(env):
 	# Load custom settings so we can tell what domains have a redirect or proxy set up on '/',

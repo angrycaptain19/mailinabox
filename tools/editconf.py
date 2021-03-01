@@ -70,13 +70,13 @@ found = set()
 buf = ""
 input_lines = list(open(filename))
 
-while len(input_lines) > 0:
+while input_lines:
 	line = input_lines.pop(0)
 
 	# If this configuration file uses folded lines, append any folded lines
 	# into our input buffer.
 	if folded_lines and line[0] not in (comment_char, " ", ""):
-		while len(input_lines) > 0 and input_lines[0][0] in " \t":
+		while input_lines and input_lines[0][0] in " \t":
 			line += input_lines.pop(0)
 
 	# See if this line is for any settings passed on the command line.
@@ -99,29 +99,29 @@ while len(input_lines) > 0:
 			buf += line
 			found.add(i)
 			break
-		
+
 		# comment-out the existing line (also comment any folded lines)
 		if is_comment is None:
 			buf += comment_char + line.rstrip().replace("\n", "\n" + comment_char) + "\n"
 		else:
 			# the line is already commented, pass it through
 			buf += line
-		
+
 		# if this option oddly appears more than once, don't add the setting again
 		if i in found:
 			break
-		
+
 		# add the new setting
 		buf += indent + name + delimiter + val + "\n"
-		
+
 		# note that we've applied this option
 		found.add(i)
-		
+
 		break
 	else:
 		# If did not match any setting names, pass this line through.
 		buf += line
-		
+
 # Put any settings we didn't see at the end of the file.
 for i in range(len(settings)):
 	if i not in found:

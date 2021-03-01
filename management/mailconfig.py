@@ -86,10 +86,16 @@ def prettify_idn_email_address(email):
 
 def is_dcv_address(email):
 	email = email.lower()
-	for localpart in ("admin", "administrator", "postmaster", "hostmaster", "webmaster", "abuse"):
-		if email.startswith(localpart+"@") or email.startswith(localpart+"+"):
-			return True
-	return False
+	return any(
+	    email.startswith(localpart + "@") or email.startswith(localpart + "+")
+	    for localpart in (
+	        "admin",
+	        "administrator",
+	        "postmaster",
+	        "hostmaster",
+	        "webmaster",
+	        "abuse",
+	    ))
 
 def open_database(env, with_connection=False):
 	conn = sqlite3.connect(env["STORAGE_ROOT"] + "/mail/users.sqlite")
@@ -224,7 +230,7 @@ def get_mail_aliases_ex(env):
 		required = (address in required_aliases)
 
 		# add to list
-		if not domain in domains:
+		if domain not in domains:
 			domains[domain] = {
 				"domain": domain,
 				"aliases": [],
@@ -262,8 +268,9 @@ def get_mail_domains(env, filter_aliases=lambda alias : True, users_only=False):
 	# Returns the domain names (IDNA-encoded) of all of the email addresses
 	# configured on the system. If users_only is True, only return domains
 	# with email addresses that correspond to user accounts.
-	domains = []
-	domains.extend([get_domain(login, as_unicode=False) for login in get_mail_users(env)])
+	domains = [
+	    get_domain(login, as_unicode=False) for login in get_mail_users(env)
+	]
 	if not users_only:
 		domains.extend([get_domain(address, as_unicode=False) for address, *_ in get_mail_aliases(env) if filter_aliases(address) ])
 	return set(domains)
@@ -475,7 +482,7 @@ def add_mail_alias(address, forwards_to, permitted_senders, env, update_if_exist
 
 	forwards_to = ",".join(validated_forwards_to)
 
-	if len(validated_permitted_senders) == 0:
+	if not validated_permitted_senders:
 		permitted_senders = None
 	else:
 		permitted_senders = ",".join(validated_permitted_senders)
@@ -487,9 +494,8 @@ def add_mail_alias(address, forwards_to, permitted_senders, env, update_if_exist
 	except sqlite3.IntegrityError:
 		if not update_if_exists:
 			return ("Alias already exists (%s)." % address, 400)
-		else:
-			c.execute("UPDATE aliases SET destination = ?, permitted_senders = ? WHERE source = ?", (forwards_to, permitted_senders, address))
-			return_status = "alias updated"
+		c.execute("UPDATE aliases SET destination = ?, permitted_senders = ? WHERE source = ?", (forwards_to, permitted_senders, address))
+		return_status = "alias updated"
 
 	conn.commit()
 

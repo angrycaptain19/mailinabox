@@ -17,11 +17,7 @@ accesses = set()
 # Scan the current and rotated access logs.
 for fn in glob.glob("/var/log/nginx/access.log*"):
 	# Gunzip if necessary.
-	if fn.endswith(".gz"):
-		f = gzip.open(fn)
-	else:
-		f = open(fn, "rb")
-
+	f = gzip.open(fn) if fn.endswith(".gz") else open(fn, "rb")
 	# Loop through the lines in the access log.
 	with f:
 		for line in f:

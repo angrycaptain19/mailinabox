@@ -45,10 +45,8 @@ def get_dns_zones(env):
 			zone_domains.add(domain)
 
 	# Make a nice and safe filename for each domain.
-	zonefiles = []
-	for domain in zone_domains:
-		zonefiles.append([domain, safe_domain_name(domain) + ".txt"])
-
+	zonefiles = [[domain, safe_domain_name(domain) + ".txt"]
+	             for domain in zone_domains]
 	# Sort the list so that the order is nice and so that nsd.conf has a
 	# stable order so we don't rewrite the file & restart the service
 	# meaninglessly.
@@ -197,10 +195,8 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 
 	has_rec_base = list(records) # clone current state
 	def has_rec(qname, rtype, prefix=None):
-		for rec in has_rec_base:
-			if rec[0] == qname and rec[1] == rtype and (prefix is None or rec[2].startswith(prefix)):
-				return True
-		return False
+		return any(rec[0] == qname and rec[1] == rtype and (
+		    prefix is None or rec[2].startswith(prefix)) for rec in has_rec_base)
 
 	# The user may set other records that don't conflict with our settings.
 	# Don't put any TXT records above this line, or it'll prevent any custom TXT records.
@@ -800,11 +796,7 @@ def filter_custom_records(domain, custom_dns_iter):
 		# our short form (None => domain, or a relative QNAME) if
 		# domain is not None.
 		if domain is not None:
-			if qname == domain:
-				qname = None
-			else:
-				qname = qname[0:len(qname)-len("." + domain)]
-
+			qname = None if qname == domain else qname[0:len(qname)-len("." + domain)]
 		yield (qname, rtype, value)
 
 def write_custom_dns_config(config, env):
@@ -938,7 +930,7 @@ def get_secondary_dns(custom_dns, mode=None):
 		if qname != '_secondary_nameserver': continue
 		for hostname in value.split(" "):
 			hostname = hostname.strip()
-			if mode == None:
+			if mode is None:
 				# Just return the setting.
 				values.append(hostname)
 				continue
@@ -1019,11 +1011,7 @@ def build_recommended_dns(env):
 
 		# expand qnames
 		for i in range(len(records)):
-			if records[i][0] == None:
-				qname = domain
-			else:
-				qname = records[i][0] + "." + domain
-
+			qname = domain if records[i][0] is None else records[i][0] + "." + domain
 			records[i] = {
 				"qname": qname,
 				"rtype": records[i][1],

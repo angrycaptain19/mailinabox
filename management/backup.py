@@ -173,9 +173,9 @@ def should_force_full(config, env):
 			# backup, as well as the age of the full backup.
 			if inc_size > .5*bak["size"]:
 				return True
-			if dateutil.parser.parse(bak["date"]) + datetime.timedelta(days=config["min_age_in_days"]*10+1) < datetime.datetime.now(dateutil.tz.tzlocal()):
-				return True
-			return False
+			return dateutil.parser.parse(bak["date"]) + datetime.timedelta(
+			    days=config["min_age_in_days"] * 10 + 1) < datetime.datetime.now(
+			        dateutil.tz.tzlocal())
 	else:
 		# If we got here there are no (full) backups, so make one.
 		# (I love for/else blocks. Here it's just to show off.)
@@ -207,8 +207,7 @@ def get_env(env):
 	return env
 
 def get_target_type(config):
-	protocol = config["target"].split(":")[0]
-	return protocol
+	return config["target"].split(":")[0]
 
 def perform_backup(full_backup):
 	env = load_environment()

@@ -30,13 +30,13 @@ import sys, subprocess, re, time, json, csv, io, urllib.request
 
 proxy = None
 args = list(sys.argv[1:])
-while len(args) > 0:
+while args:
 	if args[0] == "--proxy":
 		args.pop(0)
 		proxy = args.pop(0)
 	break
 
-if len(args) == 0:
+if not args:
 	print("Usage: python3 tls.py [--proxy ssh_host] hostname")
 	sys.exit(0)
 

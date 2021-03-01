@@ -142,13 +142,12 @@ def me():
 				"status": "missing-totp-token",
 				"reason": str(e),
 			})
-		else:
-			# Log the failed login
-			log_failed_login(request)
-			return json_response({
-				"status": "invalid",
-				"reason": str(e),
-			})
+		# Log the failed login
+		log_failed_login(request)
+		return json_response({
+			"status": "invalid",
+			"reason": str(e),
+		})
 
 	resp = {
 		"status": "ok",
