@@ -36,15 +36,14 @@ def get_hash_mfa_state(email, env):
 	]
 
 def enable_mfa(email, type, secret, token, label, env):
-	if type == "totp":
-		validate_totp_secret(secret)
-		# Sanity check with the provide current token.
-		totp = pyotp.TOTP(secret)
-		if not totp.verify(token, valid_window=1):
-			raise ValueError("Invalid token.")
-	else:
+	if type != "totp":
 		raise ValueError("Invalid MFA type.")
 
+	validate_totp_secret(secret)
+	# Sanity check with the provide current token.
+	totp = pyotp.TOTP(secret)
+	if not totp.verify(token, valid_window=1):
+		raise ValueError("Invalid token.")
 	conn, c = open_database(env, with_connection=True)
 	c.execute('INSERT INTO mfa (user_id, type, secret, label) VALUES (?, ?, ?, ?)', (get_user_id(email, c), type, secret, label))
 	conn.commit()

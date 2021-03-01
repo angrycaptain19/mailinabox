@@ -114,8 +114,10 @@ def scan_mail_log(env):
 
     try:
         import mailconfig
-        collector["known_addresses"] = (set(mailconfig.get_mail_users(env)) |
-                                        set(alias[0] for alias in mailconfig.get_mail_aliases(env)))
+        collector["known_addresses"] = set(mailconfig.get_mail_users(env)) | {
+            alias[0] for alias in mailconfig.get_mail_aliases(env)
+        }
+
     except ImportError:
         pass
 
@@ -318,11 +320,6 @@ def scan_mail_log(env):
             latest=[u["latest"] for u in data.values()],
         )
 
-    if collector["other-services"] and VERBOSE and False:
-        print_header("Other services")
-        print("The following unkown services were found in the log file.")
-        print(" ", *sorted(list(collector["other-services"])), sep='\n│ ')
-
 
 def scan_mail_log_line(line, collector):
     """ Scan a log line and extract interesting data """
@@ -434,36 +431,38 @@ def scan_postfix_smtpd_line(date, log, collector):
             return
 
         # only log mail to known recipients
-        if user_match(user):
-            if collector["known_addresses"] is None or user in collector["known_addresses"]:
-                data = collector["rejected"].get(
-                    user,
-                    {
-                        "blocked": [],
-                        "earliest": None,
-                        "latest": None,
-                    }
-                )
-                # simplify this one
+        if user_match(user) and (
+            collector["known_addresses"] is None
+            or user in collector["known_addresses"]
+        ):
+            data = collector["rejected"].get(
+                user,
+                {
+                    "blocked": [],
+                    "earliest": None,
+                    "latest": None,
+                }
+            )
+            # simplify this one
+            m = re.search(
+                r"Client host \[(.*?)\] blocked using zen.spamhaus.org; (.*)", message
+            )
+            if m:
+                message = "ip blocked: " + m.group(2)
+            else:
+                # simplify this one too
                 m = re.search(
-                    r"Client host \[(.*?)\] blocked using zen.spamhaus.org; (.*)", message
+                    r"Sender address \[.*@(.*)\] blocked using dbl.spamhaus.org; (.*)", message
                 )
                 if m:
-                    message = "ip blocked: " + m.group(2)
-                else:
-                    # simplify this one too
-                    m = re.search(
-                        r"Sender address \[.*@(.*)\] blocked using dbl.spamhaus.org; (.*)", message
-                    )
-                    if m:
-                        message = "domain blocked: " + m.group(2)
+                    message = "domain blocked: " + m.group(2)
 
-                if data["earliest"] is None:
-                    data["earliest"] = date
-                data["latest"] = date
-                data["blocked"].append((date, sender, message))
+            if data["earliest"] is None:
+                data["earliest"] = date
+            data["latest"] = date
+            data["blocked"].append((date, sender, message))
 
-                collector["rejected"][user] = data
+            collector["rejected"][user] = data
 
 
 def scan_dovecot_login_line(date, log, collector, protocol_name):
@@ -480,29 +479,28 @@ def scan_dovecot_login_line(date, log, collector, protocol_name):
 
 
 def add_login(user, date, protocol_name, host, collector):
-            # Get the user data, or create it if the user is new
-            data = collector["logins"].get(
-                user,
-                {
-                    "earliest": None,
-                    "latest": None,
-                    "totals_by_protocol": defaultdict(int),
-                    "totals_by_protocol_and_host": defaultdict(int),
-                    "activity-by-hour": defaultdict(lambda : defaultdict(int)),
-                }
-            )
+    # Get the user data, or create it if the user is new
+    data = collector["logins"].get(
+        user,
+        {
+            "earliest": None,
+            "latest": None,
+            "totals_by_protocol": defaultdict(int),
+            "totals_by_protocol_and_host": defaultdict(int),
+            "activity-by-hour": defaultdict(lambda : defaultdict(int)),
+        }
+    )
 
-            if data["earliest"] is None:
-                data["earliest"] = date
-            data["latest"] = date
+    if data["earliest"] is None:
+        data["earliest"] = date
+    data["latest"] = date
 
-            data["totals_by_protocol"][protocol_name] += 1
-            data["totals_by_protocol_and_host"][(protocol_name, host)] += 1
+    data["totals_by_protocol"][protocol_name] += 1
+    data["totals_by_protocol_and_host"][(protocol_name, host)] += 1
 
-            if host not in ("127.0.0.1", "::1") or True:
-                data["activity-by-hour"][protocol_name][date.hour] += 1
+    data["activity-by-hour"][protocol_name][date.hour] += 1
 
-            collector["logins"][user] = data
+    collector["logins"][user] = data
 
 
 def scan_postfix_lmtp_line(date, log, collector):
@@ -620,10 +618,7 @@ def print_time_table(labels, data, do_print=True):
     data.insert(0, [str(h) for h in range(24)])
 
     temp = "│ {:<%d} " % max(len(l) for l in labels)
-    lines = []
-
-    for label in labels:
-        lines.append(temp.format(label))
+    lines = [temp.format(label) for label in labels]
 
     for h in range(24):
         max_len = max(len(str(d[h])) for d in data)
